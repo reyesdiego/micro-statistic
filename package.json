@@ -1,0 +1,23 @@
+{
+  "name": "micro-statistic",
+  "version": "1.0.0",
+  "description": "Module de Estadisticas Oracle",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Diego Reyes",
+  "license": "ISC",
+  "dependencies": {
+    "async": "^2.1.5",
+    "moment": "^2.17.1",
+    "mongoose": "^4.4.0",
+    "oracledb": "^1.9.3",
+    "seneca": "^3.3.0"
+  },
+  "devDependencies": {
+    "gulp": "^3.9.1",
+    "gulp-clean": "^0.3.2",
+    "gulp-watch": "^4.3.11"
+  }
+}
