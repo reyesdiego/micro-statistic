@@ -1,1 +1,16 @@
 # Created by .ignore support plugin (hsz.mobi)
+### Node template
+# Logs
+logs
+*.log
+npm-debug.log*
+
+#WebStorm
+.idea
+
+# Built
+built
+
+# Dependency directories
+node_modules
+
