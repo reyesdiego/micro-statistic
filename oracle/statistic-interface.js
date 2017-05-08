@@ -56,6 +56,28 @@ module.exports = function () {
                 });
         });
 
+        seneca.add({role: "statistic", entity: "invoice", cmd: "getByRates"}, (args, done) => {
+            var invoice = new Invoice(oracle);
+            invoice.getByRates({fechaInicio: args.fechaInicio, fechaFin: args.fechaFin, rates: args.rates})
+                .then( data => {
+                    done(null, data);
+                })
+                .catch(err => {
+                    done(err);
+                });
+        });
+
+        seneca.add({role: "statistic", entity: "invoice", cmd: "getByRatesPivot"}, (args, done) => {
+            var invoice = new Invoice(oracle);
+            invoice.getByRatesPivot({fechaInicio: args.fechaInicio, fechaFin: args.fechaFin, rates: args.rates})
+                .then( data => {
+                    done(null, data);
+                })
+                .catch(err => {
+                    done(err);
+                });
+        });
+
         seneca.add({role: "statistic", entity: "gate", cmd: "getCountByMonth"}, (args, done) => {
             const gate = new Gate(oracle);
             gate.getCountByMonth({fechaInicio: args.fechaInicio, fechaFin: args.fechaFin})
