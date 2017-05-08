@@ -11,6 +11,7 @@ module.exports = function () {
 
     require("./include/mongoose.js")(config.mongo.url, config.mongo.options);
     const Appointment = require('./appointment.js');
+    const Invoice = require('./invoice.js');
 
     console.info("Adding Role: 'statistic'");
 
@@ -35,5 +36,17 @@ module.exports = function () {
                 done(err);
             });
     });
+
+    seneca.add({role: "statistic", entity: "invoice", cmd: "getByRates"}, (args, done) => {
+        var invoice = new Invoice();
+        invoice.getByRates({fechaInicio: args.fechaInicio, fechaFin: args.fechaFin, rates: args.rates})
+            .then( data => {
+                done(null, data);
+            })
+            .catch(err => {
+                done(err);
+            });
+    });
+
 
 };
