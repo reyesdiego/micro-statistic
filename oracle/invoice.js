@@ -108,7 +108,6 @@ class Invoice {
     getByRatesPivot (params) {
         return new Promise((resolve, reject) => {
             var moment = require("moment");
-            var Enumerable = require("linq");
             var fechaInicio,
                 fechaFin,
                 rates = '';
@@ -126,14 +125,24 @@ class Invoice {
                 rates = rates.substr(0, rates.length-1);
             }
 
-            var strSql = `SELECT TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, T.CODE, T.LARGO, T.NORMA, SUM(IMP_TOT) as TOTAL, COUNT(*) AS CNT
-                            FROM V_INVOICE_HEADER_DETAIL VHD
-                                INNER JOIN TARIFARIO_TERMINAL TT ON TT.TERMINAL = VHD.TERMINAL AND TT.CODE = VHD.CODE
-                                INNER JOIN TARIFARIO T ON T.ID = TT.TARIFARIO_ID
-                            WHERE FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
-                                   FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') AND
-                                   T.CODE IN (${rates})
-                            GROUP BY TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, T.CODE, T.LARGO, T.NORMA`;
+            var strSql = '';
+
+            if (rates !== '') {
+                strSql = `SELECT TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, T.CODE, VHD.LARGO, T.NORMA, SUM(IMP_TOT) as TOTAL, COUNT(*) AS CNT
+                    FROM V_INVOICE_HEADER_DETAIL VHD
+                        INNER JOIN TARIFARIO_TERMINAL TT ON TT.TERMINAL = VHD.TERMINAL AND TT.CODE = VHD.CODE
+                        INNER JOIN TARIFARIO T ON T.ID = TT.TARIFARIO_ID
+                    WHERE FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
+                           FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') AND
+                           T.CODE IN (${rates})
+                    GROUP BY TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, T.CODE, VHD.LARGO, T.NORMA`;
+            } else {
+                strSql = `SELECT TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.LARGO, SUM(IMP_TOT) as TOTAL, COUNT(*) AS CNT
+                    FROM V_INVOICE_HEADER_DETAIL VHD
+                    WHERE FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
+                           FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD')
+                    GROUP BY TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, VHD.LARGO`;
+            }
 
             this.cn.simpleExecute(strSql, [fechaInicio, fechaFin])
                 .then(data => {
@@ -143,7 +152,7 @@ class Invoice {
                         mes: item.MES,
                         terminal: item.TERMINAL,
                         code: item.CODE,
-                        largo: item.LARGO,
+                        largo: (item.LARGO === null) ? 'NC' : item.LARGO,
                         norma: item.NORMA,
                         total: item.TOTAL,
                         cantidad: item.CNT
