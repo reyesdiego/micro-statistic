@@ -128,22 +128,26 @@ class Invoice {
             var strSql = '';
 
             if (rates !== '') {
-                strSql = `SELECT TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, T.CODE, VHD.LARGO, T.NORMA, SUM(IMP_TOT) as TOTAL, COUNT(*) AS CNT
+                strSql = `SELECT TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, T.CODE, VHD.ISO1 LARGO, VHD.ISO3 ISO3_ID, ISO3.NAME ISO3_NAME, SUM(IMP_TOT * v.type) as TOTAL, COUNT(DISTINCT CONTENEDOR) AS CNT
                     FROM V_INVOICE_HEADER_DETAIL VHD
+                        INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
+                        LEFT JOIN ISO3 ON VHD.ISO3 = ISO3.ID
                         INNER JOIN TARIFARIO_TERMINAL TT ON TT.TERMINAL = VHD.TERMINAL AND TT.CODE = VHD.CODE
                         INNER JOIN TARIFARIO T ON T.ID = TT.TARIFARIO_ID
                     WHERE FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
                            FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') AND
                            T.CODE IN (${rates})
-                    GROUP BY TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, T.CODE, VHD.LARGO, T.NORMA`;
+                    GROUP BY TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, T.CODE, VHD.ISO1, VHD.ISO3, ISO3.NAME`;
             } else {
-                strSql = `SELECT TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.LARGO, SUM(IMP_TOT) as TOTAL, COUNT(*) AS CNT
+                strSql = `SELECT TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.ISO1 LARGO, VHD.ID ISO3_ID, ISO3.NAME ISO3_NAME, SUM(IMP_TOT * v.type) as TOTAL, COUNT(DISTINCT CONTENEDOR) AS CNT
                     FROM V_INVOICE_HEADER_DETAIL VHD
+                        INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
+                        LEFT JOIN ISO3 ON VHD.ISO3 = ISO3.ID
                     WHERE FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
                            FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD')
-                    GROUP BY TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, VHD.LARGO`;
+                    GROUP BY TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, VHD.ISO1, VHD.ID, ISO3.NAME`;
             }
-
+            console.log(fechaInicio, fechaFin);
             this.cn.simpleExecute(strSql, [fechaInicio, fechaFin])
                 .then(data => {
 
@@ -153,7 +157,8 @@ class Invoice {
                         terminal: item.TERMINAL,
                         code: item.CODE,
                         largo: (item.LARGO === null) ? 'NC' : item.LARGO,
-                        norma: item.NORMA,
+                        iso3Id: item.ISO3_ID,
+                        iso3Name: item.ISO3_NAME,
                         total: item.TOTAL,
                         cantidad: item.CNT
                     }));
