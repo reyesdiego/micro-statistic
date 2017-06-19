@@ -3,6 +3,34 @@
  */
 "use strict";
 
+function getResultSet (connection, resultSet, numRows) {
+    return new Promise((resolve, reject) => {
+        var ret = [];
+        fetchRowsFromRS(connection, resultSet, numRows, ret, (err, ret) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(ret);
+            }
+        });
+    });
+}
+
+function fetchRowsFromRS(connection, resultSet, numRows, ret, callback) {
+    resultSet.getRows(numRows, (err, rows) => {
+        if (err) {
+            callback(err);
+        } else if (rows.length === 0) {    // no rows, or no more rows
+            callback(undefined, ret);
+        } else if (rows.length > 0) {
+            rows.map(item => {
+                ret.push(item);
+            });
+            fetchRowsFromRS(connection, resultSet, numRows, ret, callback);
+        }
+    });
+}
+
 class Invoice {
     constructor (oracle) {
         this.cn = oracle;
@@ -147,32 +175,48 @@ class Invoice {
                            FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD')
                     GROUP BY TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, VHD.ISO1, VHD.ID, ISO3.NAME`;
             }
-            console.log(fechaInicio, fechaFin);
-            this.cn.simpleExecute(strSql, [fechaInicio, fechaFin])
-                .then(data => {
 
-                    let result = data.rows.map(item => ({
-                        anio: item.ANIO,
-                        mes: item.MES,
-                        terminal: item.TERMINAL,
-                        code: item.CODE,
-                        largo: (item.LARGO === null) ? 'NC' : item.LARGO,
-                        iso3Id: item.ISO3_ID,
-                        iso3Name: item.ISO3_NAME,
-                        total: item.TOTAL,
-                        cantidad: item.CNT
-                    }));
-                    resolve({
-                        status: "OK",
-                        data: result
-                    });
-                })
-                .catch(err => {
-                    reject({
-                        status: "ERROR",
-                        message: err.message,
-                        data: err
-                    });
+            var self = this;
+            this.cn.getConnection()
+            .then(connection => {
+                    this.cn.execute(strSql, [fechaInicio, fechaFin], {outFormat: this.cn.OBJECT, resultSet: true}, connection)
+                        .then(data => {
+
+                            let resultSet = data.resultSet;
+                            getResultSet(connection, data.resultSet, 500)
+                                .then(data => {
+                                    resultSet.close(err=> {
+                                        self.cn.releaseConnection(connection);
+                                    });
+                                    let result = data.map(item => ({
+                                        anio: item.ANIO,
+                                        mes: item.MES,
+                                        terminal: item.TERMINAL,
+                                        code: item.CODE,
+                                        largo: (item.LARGO === null) ? 'NC' : item.LARGO,
+                                        iso3Id: item.ISO3_ID,
+                                        iso3Name: item.ISO3_NAME,
+                                        total: item.TOTAL,
+                                        cantidad: item.CNT
+                                    }));
+                                    resolve({
+                                        status: "OK",
+                                        data: result
+                                    });
+                                })
+                                .catch(err => {
+                                    self.cn.releaseConnection(connection);
+                                    reject({status: "ERROR", message: err.message, data: err});
+                                });
+                        })
+                        .catch(err => {
+                            self.cn.releaseConnection(connection);
+                            reject({
+                                status: "ERROR",
+                                message: err.message,
+                                data: err
+                            });
+                        });
                 });
         });
     }
