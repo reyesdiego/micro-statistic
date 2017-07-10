@@ -134,6 +134,7 @@ class Invoice {
     }
 
     getByRatesPivot (params) {
+
         return new Promise((resolve, reject) => {
             var moment = require("moment");
             var fechaInicio,
@@ -156,7 +157,7 @@ class Invoice {
             var strSql = '';
 
             if (rates !== '') {
-                strSql = `SELECT TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, T.CODE, VHD.ISO1 LARGO, VHD.ISO3 ISO3_ID, ISO3.NAME ISO3_NAME, SUM(IMP_TOT * v.type) as TOTAL, COUNT(DISTINCT CONTENEDOR) AS CNT
+                strSql = `SELECT TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.TIPO, T.CODE, VHD.ISO1 LARGO, VHD.ISO3 ISO3_ID, ISO3.NAME ISO3_NAME, SUM(IMP_TOT * v.type) as TOTAL, COUNT(DISTINCT CONTENEDOR) AS CNT
                     FROM V_INVOICE_HEADER_DETAIL VHD
                         INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
                         LEFT JOIN ISO3 ON VHD.ISO3 = ISO3.ID
@@ -164,16 +165,18 @@ class Invoice {
                         INNER JOIN TARIFARIO T ON T.ID = TT.TARIFARIO_ID
                     WHERE FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
                            FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') AND
+                           LENGTH(CONTENEDOR) = 11 AND
                            T.CODE IN (${rates})
-                    GROUP BY TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, T.CODE, VHD.ISO1, VHD.ISO3, ISO3.NAME`;
+                    GROUP BY TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, VHD.TIPO, T.CODE, VHD.ISO1, VHD.ISO3, ISO3.NAME`;
             } else {
-                strSql = `SELECT TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.ISO1 LARGO, VHD.ID ISO3_ID, ISO3.NAME ISO3_NAME, SUM(IMP_TOT * v.type) as TOTAL, COUNT(DISTINCT CONTENEDOR) AS CNT
+                strSql = `SELECT TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.TIPO, VHD.ISO1 LARGO, VHD.ISO3 ISO3_ID, ISO3.NAME ISO3_NAME, SUM(IMP_TOT * v.type) as TOTAL, COUNT(DISTINCT CONTENEDOR) AS CNT
                     FROM V_INVOICE_HEADER_DETAIL VHD
                         INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
                         LEFT JOIN ISO3 ON VHD.ISO3 = ISO3.ID
                     WHERE FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
-                           FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD')
-                    GROUP BY TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, VHD.ISO1, VHD.ID, ISO3.NAME`;
+                           FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') AND
+                           LENGTH(CONTENEDOR) = 11
+                    GROUP BY TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, VHD.TIPO, VHD.ISO1, VHD.ISO3, ISO3.NAME`;
             }
 
             var self = this;
@@ -181,17 +184,18 @@ class Invoice {
             .then(connection => {
                     this.cn.execute(strSql, [fechaInicio, fechaFin], {outFormat: this.cn.OBJECT, resultSet: true}, connection)
                         .then(data => {
-
                             let resultSet = data.resultSet;
                             getResultSet(connection, data.resultSet, 500)
                                 .then(data => {
-                                    resultSet.close(err=> {
+
+                                    resultSet.close( err => {
                                         self.cn.releaseConnection(connection);
                                     });
                                     let result = data.map(item => ({
                                         anio: item.ANIO,
                                         mes: item.MES,
                                         terminal: item.TERMINAL,
+                                        mov: item.TIPO,
                                         code: item.CODE,
                                         largo: (item.LARGO === null) ? 'NC' : item.LARGO,
                                         iso3Id: item.ISO3_ID,
