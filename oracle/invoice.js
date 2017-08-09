@@ -197,10 +197,11 @@ class Invoice {
                                         terminal: item.TERMINAL,
                                         mov: item.TIPO,
                                         code: item.CODE,
-                                        largo: (item.LARGO === null) ? 'NC' : item.LARGO,
+                                        largo: (item.LARGO === null) ? 'Sin Informar' : (item.LARGO * 10).toString() + " Pies",
                                         iso3Id: item.ISO3_ID,
                                         iso3Name: item.ISO3_NAME,
                                         total: item.TOTAL,
+                                        teus: (item.LARGO === '4') ? item.CNT * 2 : item.CNT,
                                         cantidad: item.CNT
                                     }));
                                     resolve({
