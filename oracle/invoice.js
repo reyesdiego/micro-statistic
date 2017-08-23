@@ -157,32 +157,82 @@ class Invoice {
             var strSql = '';
 
             if (rates !== '') {
-                strSql = `SELECT TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.TIPO, T.CODE, VHD.ISO1 LARGO, VHD.ISO3 ISO3_ID, ISO3.NAME ISO3_NAME, SUM(IMP_TOT * v.type) as TOTAL, COUNT(DISTINCT CONTENEDOR) AS CNT
-                    FROM V_INVOICE_HEADER_DETAIL VHD
-                        INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
-                        LEFT JOIN ISO3 ON VHD.ISO3 = ISO3.ID
-                        INNER JOIN TARIFARIO_TERMINAL TT ON TT.TERMINAL = VHD.TERMINAL AND TT.CODE = VHD.CODE
-                        INNER JOIN TARIFARIO T ON T.ID = TT.TARIFARIO_ID
-                    WHERE FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
-                           FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') AND
-                           LENGTH(CONTENEDOR) = 11 AND
-                           T.CODE IN (${rates})
-                    GROUP BY TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, VHD.TIPO, T.CODE, VHD.ISO1, VHD.ISO3, ISO3.NAME`;
-            } else {
+                //strSql = `SELECT TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.TIPO, T.CODE, VHD.ISO1 LARGO, VHD.ISO3 ISO3_ID, ISO3.NAME ISO3_NAME, SUM(IMP_TOT * v.type) as TOTAL, COUNT(DISTINCT CONTENEDOR) AS CNT
+                //    FROM V_INVOICE_HEADER_DETAIL VHD
+                //        INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
+                //        LEFT JOIN ISO3 ON VHD.ISO3 = ISO3.ID
+                //        INNER JOIN TARIFARIO_TERMINAL TT ON TT.TERMINAL = VHD.TERMINAL AND TT.CODE = VHD.CODE
+                //        INNER JOIN TARIFARIO T ON T.ID = TT.TARIFARIO_ID
+                //    WHERE vhd.terminal = 'BACTSSA' AND NRO_COMPROB = 61977 AND
+                //            FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
+                //           FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') AND
+                //           LENGTH(CONTENEDOR) = 11 AND
+                //           T.CODE IN (${rates})
+                //    GROUP BY TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, VHD.TIPO, T.CODE, VHD.ISO1, VHD.ISO3, ISO3.NAME`;
+
+//                strSql = `SELECT contenedor, TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.TIPO AS MOV, T.CODE, iso1 AS LARGO, ISO3.TIPO, SUM(IMP_TOT * v.type) as TOTAL
+//FROM V_INVOICE_HEADER_DETAIL VHD
+//    INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
+//    LEFT JOIN ISO3 ON VHD.ISO3 = ISO3.ID
+//WHERE COD_MONEDA <> 'PES' AND
+//      FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
+//      FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') AND
+//      LENGTH(CONTENEDOR) = 11 AND
+//      T.CODE IN (${rates})
+//group by VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, VHD.TIPO, TH.ID, iso1, ISO3.TIPO`;
+//
+                strSql = `
+SELECT contenedor, TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.TIPO AS MOV, TH.ID, iso1 AS LARGO, ISO3.TIPO, SUM(IMP_TOT * v.type) as TOTAL
+FROM V_INVOICE_HEADER_DETAIL VHD
+    INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
+    LEFT JOIN ISO3 ON VHD.ISO3 = ISO3.ID
+    INNER JOIN TARIFARIO_TERMINAL TT ON TT.TERMINAL = VHD.TERMINAL AND TT.CODE = VHD.CODE
+    INNER JOIN TARIFARIO T ON T.ID = TT.TARIFARIO_ID
+    INNER JOIN TARIFARIO_GROUP TG ON T.ID = TG.TARIFARIO_ID
+    INNER JOIN TARIFARIO_HEADER TH ON TG.TARIFARIO_HEADER_ID = TH.ID
+WHERE COD_MONEDA = 'DOL' AND
+      FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
+      FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') /*AND
+      LENGTH(CONTENEDOR) = 11 */AND
+      TH.ID IN (${rates})
+group by VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, VHD.TIPO, TH.ID, iso1, ISO3.TIPO`;
+
+
+           } else {
+                /*
                 strSql = `SELECT TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.TIPO, VHD.ISO1 LARGO, VHD.ISO3 ISO3_ID, ISO3.NAME ISO3_NAME, SUM(IMP_TOT * v.type) as TOTAL, COUNT(DISTINCT CONTENEDOR) AS CNT
                     FROM V_INVOICE_HEADER_DETAIL VHD
                         INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
                         LEFT JOIN ISO3 ON VHD.ISO3 = ISO3.ID
-                    WHERE FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
+                    WHERE vhd.terminal = 'BACTSSA' AND NRO_COMPROB = 61977 and
+                    FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
                            FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') AND
                            LENGTH(CONTENEDOR) = 11
                     GROUP BY TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, VHD.TIPO, VHD.ISO1, VHD.ISO3, ISO3.NAME`;
+                */
+                strSql = `SELECT contenedor, TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.TIPO AS MOV, iso1 AS LARGO, ISO3.TIPO, SUM(IMP_TOT * v.type) as TOTAL
+FROM V_INVOICE_HEADER_DETAIL VHD
+    INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
+    LEFT JOIN ISO3 ON VHD.ISO3 = ISO3.ID
+WHERE COD_MONEDA <> 'PES' AND
+    FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
+    FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') AND
+    LENGTH(CONTENEDOR) = 11
+group by VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, VHD.TIPO, iso1, ISO3.TIPO`;
+
+
+            //    ( (vhd.terminal = 'BACTSSA' AND NRO_COMPROB in (42618, 61977) and nro_pto_venta in (25, 29) )
+            //    or
+            //    (vhd.terminal = 'TRP' AND NRO_COMPROB in (41952) and nro_pto_venta in (55) )
+            //) and
+
             }
 
             var self = this;
             this.cn.getConnection()
             .then(connection => {
                     this.cn.execute(strSql, [fechaInicio, fechaFin], {outFormat: this.cn.OBJECT, resultSet: true}, connection)
+                    //this.cn.execute(strSql, [], {outFormat: this.cn.OBJECT, resultSet: true}, connection)
                         .then(data => {
                             let resultSet = data.resultSet;
                             getResultSet(connection, data.resultSet, 500)
@@ -195,14 +245,13 @@ class Invoice {
                                         anio: item.ANIO,
                                         mes: item.MES,
                                         terminal: item.TERMINAL,
-                                        mov: item.TIPO,
-                                        code: item.CODE,
+                                        tipo: (item.TIPO === null) ? 'Sin Informar' : item.TIPO,
+                                        mov: (item.MOV === null) ? 'Sin Informar' : item.MOV,
+                                        code: item.ID,
                                         largo: (item.LARGO === null) ? 'Sin Informar' : (item.LARGO * 10).toString() + " Pies",
-                                        iso3Id: item.ISO3_ID,
-                                        iso3Name: item.ISO3_NAME,
-                                        total: item.TOTAL,
-                                        teus: (item.LARGO === '4') ? item.CNT * 2 : item.CNT,
-                                        cantidad: item.CNT
+                                        iso3Id: item.TIPO,
+                                        iso3Name: item.TIPO,
+                                        total: item.TOTAL
                                     }));
                                     resolve({
                                         status: "OK",

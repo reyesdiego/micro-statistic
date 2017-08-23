@@ -5,7 +5,7 @@
 
 const config = require("../config/config.js")();
 
-var seneca = require("seneca")();
+var seneca = require("seneca")({timeout: 60000});
 
 seneca.use("./statistic-interface.js");
 
