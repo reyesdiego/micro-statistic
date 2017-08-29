@@ -78,6 +78,17 @@ module.exports = function () {
                 });
         });
 
+        seneca.add({role: "statistic", entity: "invoice", cmd: "getByGroupsPivot"}, (args, done) => {
+            var invoice = new Invoice(oracle);
+            invoice.getByGroupsPivot({fechaInicio: args.fechaInicio, fechaFin: args.fechaFin, groups: args.groups})
+                .then( data => {
+                    done(null, data);
+                })
+                .catch(err => {
+                    done(err);
+                });
+        });
+
         seneca.add({role: "statistic", entity: "gate", cmd: "getCountByMonth"}, (args, done) => {
             const gate = new Gate(oracle);
             gate.getCountByMonth({fechaInicio: args.fechaInicio, fechaFin: args.fechaFin})

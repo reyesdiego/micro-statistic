@@ -5,11 +5,11 @@
 
 const config = require("../config/config.js")();
 
-var seneca = require("seneca")({timeout: 60000});
+var seneca = require("seneca")();
 
 seneca.use("./statistic-interface.js");
 
-seneca.listen(config.PORT, config.HOST, (err, data) => {
+seneca.listen({port:config.PORT, host: config.HOST, timeout: 80000}, (err, data) => {
     console.info('Micro Service Statistic Oracle');
     console.info(` HOST: ${data.host} \n PORT: ${data.port}`);
 });

@@ -275,6 +275,109 @@ group by VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_E
         });
     }
 
+    getByGroupsPivot (params) {
+
+        return new Promise((resolve, reject) => {
+            var moment = require("moment");
+            var fechaInicio,
+                fechaFin,
+                groups = '';
+
+            if (params.fechaInicio !== undefined) {
+                fechaInicio = moment(params.fechaInicio, ['YYYY-MM-DD']).format('YYYY-MM-DD');
+            }
+            if (params.fechaInicio !== undefined) {
+                fechaFin = moment(params.fechaFin, ['YYYY-MM-DD']).format('YYYY-MM-DD');
+            }
+
+            if (params.groups !== undefined && params.groups.length > 0) {
+                params.groups.forEach(item => {
+                    groups += `'${item}',`;
+                });
+                groups = groups.substr(0, groups.length-1);
+            }
+
+            var strSql = '';
+            if (groups !== '') {
+                strSql = `SELECT CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.TIPO AS MOV, iso1 AS LARGO, ISO3.TIPO, SUM(IMP_TOT * v.type) as TOTAL
+                            FROM V_INVOICE_HEADER_DETAIL VHD
+                                INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
+                                LEFT JOIN ISO3 ON VHD.ISO3 = ISO3.ID
+                            WHERE CONTENEDOR <> 'SIN-CONTENEDOR' AND COD_MONEDA = 'DOL' AND
+                                  FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
+                                  FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') AND
+                                  VHD.ID IN ( SELECT VHD.ID
+                                              FROM V_INVOICE_HEADER_DETAIL VHD
+                                              WHERE VHD.ID IN ( SELECT VHD.ID
+                                                              FROM TARIFARIO_TERMINAL TT
+                                                                  INNER JOIN TARIFARIO_GROUP TG ON TT.TARIFARIO_ID = TG.TARIFARIO_ID
+                                                              WHERE VHD.TERMINAL = TT.TERMINAL AND
+                                                                    TT.CODE = VHD.CODE AND
+                                                                    TG.TARIFARIO_HEADER_ID IN (${groups})  )
+                                             GROUP BY VHD.ID )
+                            GROUP BY VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, VHD.TIPO, iso1, ISO3.TIPO`;
+
+            } else {
+                strSql = `SELECT contenedor, TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.TIPO AS MOV, iso1 AS LARGO, ISO3.TIPO, SUM(IMP_TOT * v.type) as TOTAL
+                        FROM V_INVOICE_HEADER_DETAIL VHD
+                            INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
+                            LEFT JOIN ISO3 ON VHD.ISO3 = ISO3.ID
+                        WHERE COD_MONEDA <> 'PES' AND
+                            FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
+                            FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') AND
+                            LENGTH(CONTENEDOR) = 11
+                        GROUP BY VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, VHD.TIPO, iso1, ISO3.TIPO`;
+            }
+
+            var self = this;
+            this.cn.getConnection()
+                .then(connection => {
+                    this.cn.execute(strSql, [fechaInicio, fechaFin], {outFormat: this.cn.OBJECT, resultSet: true}, connection)
+                        //this.cn.execute(strSql, [], {outFormat: this.cn.OBJECT, resultSet: true}, connection)
+                        .then(data => {
+                            let resultSet = data.resultSet;
+                            getResultSet(connection, data.resultSet, 500)
+                                .then(data => {
+
+                                    resultSet.close( err => {
+                                        self.cn.releaseConnection(connection);
+                                    });
+                                    let result = data.map(item => ({
+                                        anio: item.ANIO,
+                                        mes: item.MES,
+                                        terminal: item.TERMINAL,
+                                        tipo: (item.TIPO === null) ? 'Sin Informar' : item.TIPO,
+                                        mov: (item.MOV === null) ? 'Sin Informar' : item.MOV,
+                                        code: item.ID,
+                                        largo: (item.LARGO === null) ? 'Sin Informar' : (item.LARGO * 10).toString() + " Pies",
+                                        iso3Id: item.TIPO,
+                                        iso3Name: item.TIPO,
+                                        total: item.TOTAL
+                                    }));
+
+                                    resolve({
+                                        status: "OK",
+                                        data: result
+                                    });
+                                })
+                                .catch(err => {
+                                    self.cn.releaseConnection(connection);
+                                    reject({status: "ERROR", message: err.message, data: err});
+                                });
+                        })
+                        .catch(err => {
+                            console.info("SHIT catch")
+                            self.cn.releaseConnection(connection);
+                            reject({
+                                status: "ERROR",
+                                message: err.message,
+                                data: err
+                            });
+                        });
+                });
+        });
+    }
+
     getCountsByDate (params) {
         return new Promise((resolve, reject) => {
             var moment = require("moment");
