@@ -299,13 +299,16 @@ group by VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_E
 
             var strSql = '';
             if (groups !== '') {
-                strSql = `SELECT CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.TIPO AS MOV, iso1 AS LARGO, ISO3.TIPO, SUM(IMP_TOT * v.type) as TOTAL
+                strSql = `SELECT contenedor, TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.TIPO AS MOV, iso1 AS LARGO, iso2.tipo as altura, ISO3F.NAME AS FORMA, SUM(IMP_TOT * v.type) as TOTAL
                             FROM V_INVOICE_HEADER_DETAIL VHD
                                 INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
+                                LEFT JOIN ISO2 ON VHD.ISO2 = ISO2.ID
                                 LEFT JOIN ISO3 ON VHD.ISO3 = ISO3.ID
-                            WHERE CONTENEDOR <> 'SIN-CONTENEDOR' AND COD_MONEDA = 'DOL' AND
+                                LEFT JOIN ISO3_FORMA ISO3F ON ISO3F.ID = ISO3.FORMA
+                            WHERE COD_MONEDA = 'DOL' AND
                                   FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
                                   FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') AND
+                                  LENGTH(CONTENEDOR) = 11 AND
                                   VHD.ID IN ( SELECT VHD.ID
                                               FROM V_INVOICE_HEADER_DETAIL VHD
                                               WHERE VHD.ID IN ( SELECT VHD.ID
@@ -315,18 +318,20 @@ group by VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_E
                                                                     TT.CODE = VHD.CODE AND
                                                                     TG.TARIFARIO_HEADER_ID IN (${groups})  )
                                              GROUP BY VHD.ID )
-                            GROUP BY VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, VHD.TIPO, iso1, ISO3.TIPO`;
+                            GROUP BY VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, VHD.TIPO, iso1, iso2.tipo, ISO3F.NAME`;
 
             } else {
-                strSql = `SELECT contenedor, TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.TIPO AS MOV, iso1 AS LARGO, ISO3.TIPO, SUM(IMP_TOT * v.type) as TOTAL
-                        FROM V_INVOICE_HEADER_DETAIL VHD
-                            INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
-                            LEFT JOIN ISO3 ON VHD.ISO3 = ISO3.ID
-                        WHERE COD_MONEDA <> 'PES' AND
-                            FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
-                            FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') AND
-                            LENGTH(CONTENEDOR) = 11
-                        GROUP BY VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, VHD.TIPO, iso1, ISO3.TIPO`;
+                strSql = `SELECT contenedor, TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.TIPO AS MOV, iso1 AS LARGO, iso2.tipo as altura, ISO3F.NAME AS FORMA, SUM(IMP_TOT * v.type) as TOTAL
+                            FROM V_INVOICE_HEADER_DETAIL VHD
+                                INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
+                                LEFT JOIN ISO2 ON VHD.ISO2 = ISO2.ID
+                                LEFT JOIN ISO3 ON VHD.ISO3 = ISO3.ID
+                                LEFT JOIN ISO3_FORMA ISO3F ON ISO3F.ID = ISO3.FORMA
+                            WHERE COD_MONEDA = 'DOL' AND
+                                  FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
+                                  FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') AND
+                                  LENGTH(CONTENEDOR) = 11
+                            GROUP BY VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, VHD.TIPO, iso1, iso2.tipo, ISO3F.NAME`;
             }
 
             var self = this;
@@ -346,13 +351,13 @@ group by VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_E
                                         anio: item.ANIO,
                                         mes: item.MES,
                                         terminal: item.TERMINAL,
-                                        tipo: (item.TIPO === null) ? 'Sin Informar' : item.TIPO,
+                                        tipo: (item.FORMA === null) ? 'Sin Informar' : item.FORMA,
                                         mov: (item.MOV === null) ? 'Sin Informar' : item.MOV,
-                                        code: item.ID,
                                         largo: (item.LARGO === null) ? 'Sin Informar' : (item.LARGO * 10).toString() + " Pies",
-                                        iso3Id: item.TIPO,
-                                        iso3Name: item.TIPO,
-                                        total: item.TOTAL
+                                        iso2Id: (item.ALTURA === null) ? 'Sin Informar' : item.ALTURA,
+                                        iso3Id: item.ID,
+                                        total: item.TOTAL,
+                                        contenedor: item.CONTENEDOR
                                     }));
 
                                     resolve({
