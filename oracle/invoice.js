@@ -299,7 +299,7 @@ group by VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_E
 
             var strSql = '';
             if (groups !== '') {
-                strSql = `SELECT contenedor, TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.TIPO AS MOV, iso1 AS LARGO, iso2.tipo as altura, ISO3F.NAME AS FORMA, SUM(IMP_TOT * v.type) as TOTAL
+                strSql = `SELECT contenedor, TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.TIPO, iso1, iso2.tipo as altura, ISO3F.NAME AS FORMA, SUM(IMP_TOT * v.type) as TOTAL
                             FROM V_INVOICE_HEADER_DETAIL VHD
                                 INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
                                 LEFT JOIN ISO2 ON VHD.ISO2 = ISO2.ID
@@ -321,7 +321,7 @@ group by VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_E
                             GROUP BY VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_EMISION, 'MM'), VHD.TERMINAL, VHD.TIPO, iso1, iso2.tipo, ISO3F.NAME`;
 
             } else {
-                strSql = `SELECT contenedor, TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.TIPO AS MOV, iso1 AS LARGO, iso2.tipo as altura, ISO3F.NAME AS FORMA, SUM(IMP_TOT * v.type) as TOTAL
+                strSql = `SELECT contenedor, TO_CHAR(VHD.FECHA_EMISION, 'YYYY') AS ANIO, TO_CHAR(VHD.FECHA_EMISION, 'MM') AS MES, VHD.TERMINAL, VHD.TIPO, iso1, iso2.tipo as altura, ISO3F.NAME AS FORMA, SUM(IMP_TOT * v.type) as TOTAL
                             FROM V_INVOICE_HEADER_DETAIL VHD
                                 INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
                                 LEFT JOIN ISO2 ON VHD.ISO2 = ISO2.ID
@@ -338,26 +338,27 @@ group by VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_E
             this.cn.getConnection()
                 .then(connection => {
                     this.cn.execute(strSql, [fechaInicio, fechaFin], {outFormat: this.cn.OBJECT, resultSet: true}, connection)
-                        //this.cn.execute(strSql, [], {outFormat: this.cn.OBJECT, resultSet: true}, connection)
+//                    this.cn.execute(strSql, [fechaInicio, fechaFin], {outFormat: this.cn.OBJECT}, connection)
                         .then(data => {
+
                             let resultSet = data.resultSet;
-                            getResultSet(connection, data.resultSet, 500)
+                            getResultSet(connection, data.resultSet, 1000)
                                 .then(data => {
 
                                     resultSet.close( err => {
                                         self.cn.releaseConnection(connection);
                                     });
+
                                     let result = data.map(item => ({
                                         anio: item.ANIO,
                                         mes: item.MES,
                                         terminal: item.TERMINAL,
                                         tipo: (item.FORMA === null) ? 'Sin Informar' : item.FORMA,
-                                        mov: (item.MOV === null) ? 'Sin Informar' : item.MOV,
-                                        largo: (item.LARGO === null) ? 'Sin Informar' : (item.LARGO * 10).toString() + " Pies",
+                                        mov: (item.TIPO === null) ? 'Sin Informar' : item.TIPO,
+                                        largo: (item.ISO1 === null) ? 'Sin Informar' : (item.ISO1 * 10).toString() + " Pies",
                                         iso2Id: (item.ALTURA === null) ? 'Sin Informar' : item.ALTURA,
-                                        iso3Id: item.ID,
-                                        total: item.TOTAL,
-                                        contenedor: item.CONTENEDOR
+                                        /////iso3Id: item.ID,
+                                        total: item.TOTAL
                                     }));
 
                                     resolve({
@@ -369,6 +370,8 @@ group by VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_E
                                     self.cn.releaseConnection(connection);
                                     reject({status: "ERROR", message: err.message, data: err});
                                 });
+
+
                         })
                         .catch(err => {
                             console.info("SHIT catch")
