@@ -9,7 +9,7 @@ var seneca = require("seneca")();
 
 seneca.use("./statistic-interface.js");
 
-seneca.listen({port:config.PORT, host: config.HOST, timeout: 80000}, (err, data) => {
+seneca.listen({port:config.PORT, host: config.HOST, timeout: 100000}, (err, data) => {
     console.info('Micro Service Statistic Oracle');
     console.info(` HOST: ${data.host} \n PORT: ${data.port}`);
 });
