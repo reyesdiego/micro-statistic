@@ -300,7 +300,7 @@ group by VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_E
 
             var strSql = '';
             if (groups !== '') {
-                strSql = `SELECT contenedor, to_number(TO_CHAR(VHD.FECHA_EMISION, 'YYYY')) AS ANIO, to_number(TO_CHAR(VHD.FECHA_EMISION, 'MM')) AS MES, VHD.TERMINAL, VHD.TIPO, TG.TARIFARIO_HEADER_ID, iso1, iso2.tipo as altura, ISO3.FORMA AS FORMA, SUM(IMP_TOT * v.type) as TOTAL
+                strSql = `SELECT contenedor, to_number(TO_CHAR(VHD.FECHA_EMISION, 'YYYY')) AS ANIO, to_number(TO_CHAR(VHD.FECHA_EMISION, 'MM')) AS MES, VHD.TERMINAL, VHD.TIPO, V.ABBREV AS COD_TIPO_COMPROB, TG.TARIFARIO_HEADER_ID, iso1, iso2.tipo as altura, ISO3.FORMA AS FORMA, SUM(IMP_TOT * v.type) as TOTAL
                             FROM V_INVOICE_HEADER_DETAIL VHD
                                 INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
                                 INNER JOIN TARIFARIO_TERMINAL TT ON TT.CODE = VHD.CODE AND TT.TERMINAL = VHD.TERMINAL
@@ -311,7 +311,7 @@ group by VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_E
                             WHERE COD_MONEDA = 'DOL' AND
                                   FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
                                   FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') AND
-                                  --LENGTH(CONTENEDOR) = 11 AND
+                                  LENGTH(CONTENEDOR) = 11 AND
                                         EXISTS ( SELECT *
                                               FROM V_INVOICE_HEADER_DETAIL VH2
                                               WHERE VH2.TERMINAL = VHD.TERMINAL AND
@@ -324,21 +324,19 @@ group by VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_E
                                                                     TT1.CODE = VH2.CODE AND
                                                                     TG1.TARIFARIO_HEADER_ID IN (${groups})  )
                                              )
-                            GROUP BY VHD.CONTENEDOR, to_number(TO_CHAR(VHD.FECHA_EMISION, 'YYYY')), to_number(TO_CHAR(VHD.FECHA_EMISION, 'MM')), VHD.TERMINAL, VHD.TIPO, TG.TARIFARIO_HEADER_ID, iso1, iso2.tipo, ISO3.FORMA`;
+                            GROUP BY VHD.CONTENEDOR, to_number(TO_CHAR(VHD.FECHA_EMISION, 'YYYY')), to_number(TO_CHAR(VHD.FECHA_EMISION, 'MM')), VHD.TERMINAL, VHD.TIPO, V.ABBREV, TG.TARIFARIO_HEADER_ID, iso1, iso2.tipo, ISO3.FORMA`;
             } else {
-                strSql = `SELECT contenedor, to_number(TO_CHAR(VHD.FECHA_EMISION, 'YYYY')) AS ANIO, to_number(TO_CHAR(VHD.FECHA_EMISION, 'MM')) AS MES, VHD.TERMINAL, VHD.TIPO, iso1, iso2.tipo as altura, ISO3.FORMA AS FORMA, SUM(IMP_TOT * v.type) as TOTAL
-                            FROM V_INVOICE_HEADER_DETAIL VHD
-                                INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
-                                INNER JOIN TARIFARIO_TERMINAL TT ON TT.CODE = VHD.CODE AND TT.TERMINAL = VHD.TERMINAL
-                                INNER JOIN TARIFARIO_GROUP TG ON TT.TARIFARIO_ID = TG.TARIFARIO_ID
-                                LEFT JOIN ISO2 ON VHD.ISO2 = ISO2.ID
-                                LEFT JOIN ISO3 ON VHD.ISO3 = ISO3.ID
-                                --LEFT JOIN ISO3_FORMA ISO3F ON ISO3F.ID = ISO3.FORMA
-                            WHERE COD_MONEDA = 'DOL' AND
+                strSql = `  SELECT  CONTENEDOR, to_number(TO_CHAR(VHD.FECHA_EMISION, 'YYYY')) AS ANIO, to_number(TO_CHAR(VHD.FECHA_EMISION, 'MM')) AS MES, VHD.TERMINAL, V.ABBREV AS COD_TIPO_COMPROB, VHD.TIPO, iso1, iso2.tipo as altura, ISO3.FORMA AS FORMA, SUM(IMP_TOT * v.type) as TOTAL
+                              FROM V_INVOICE_HEADER_DETAIL VHD
+                                  INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
+                                  LEFT JOIN ISO2 ON VHD.ISO2 = ISO2.ID
+                                  LEFT JOIN ISO3 ON VHD.ISO3 = ISO3.ID
+                                  --LEFT JOIN ISO3_FORMA ISO3F ON ISO3F.ID = ISO3.FORMA
+                              WHERE COD_MONEDA = 'DOL' AND
                                   FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
-                                  FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') /*AND
-                                  LENGTH(CONTENEDOR) = 11*/
-                            GROUP BY VHD.CONTENEDOR, to_number(TO_CHAR(VHD.FECHA_EMISION, 'YYYY')), to_number(TO_CHAR(VHD.FECHA_EMISION, 'MM')), VHD.TERMINAL, VHD.TIPO, iso1, iso2.tipo, ISO3.FORMA`;
+                                  FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') AND
+                                  LENGTH(CONTENEDOR) = 11
+                              GROUP BY CONTENEDOR, to_number(TO_CHAR(VHD.FECHA_EMISION, 'YYYY')), to_number(TO_CHAR(VHD.FECHA_EMISION, 'MM')), VHD.TERMINAL, V.ABBREV, VHD.TIPO, iso1, iso2.tipo, ISO3.FORMA`;
             }
 
             var self = this;
@@ -367,11 +365,9 @@ group by VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_E
                                                 mov: (item.TIPO === null) ? 'Sin Informar' : item.TIPO,
                                                 largo: (item.ISO1 === null) ? 'Sin Informar' : (item.ISO1 * 10).toString() + " Pies",
                                                 iso2Id: (item.ALTURA === null) ? 'Sin Informar' : item.ALTURA,
-                                                //tipo: item.FORMA,
-                                                //mov: item.TIPO,
-                                                //largo: item.ISO1,
-                                                //iso2Id: item.ALTURA,
-                                                tariGrupo: item.TARIFARIO_HEADER_ID,
+                                                contenedor: item.CONTENEDOR,
+                                                tComprob: item.COD_TIPO_COMPROB,
+                                                //tariGrupo: item.TARIFARIO_HEADER_ID,
                                                 tot: item.TOTAL
                                         }))
                                         .toArray();
