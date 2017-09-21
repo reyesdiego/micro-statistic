@@ -326,7 +326,7 @@ group by VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_E
                                              )
                             GROUP BY VHD.CONTENEDOR, to_number(TO_CHAR(VHD.FECHA_EMISION, 'YYYY')), to_number(TO_CHAR(VHD.FECHA_EMISION, 'MM')), VHD.TERMINAL, VHD.TIPO, V.ABBREV, TG.TARIFARIO_HEADER_ID, iso1, iso2.tipo, ISO3.FORMA`;
             } else {
-                strSql = `  SELECT  CONTENEDOR, to_number(TO_CHAR(VHD.FECHA_EMISION, 'YYYY')) AS ANIO, to_number(TO_CHAR(VHD.FECHA_EMISION, 'MM')) AS MES, VHD.TERMINAL, V.ABBREV AS COD_TIPO_COMPROB, VHD.TIPO, iso1, iso2.tipo as altura, ISO3.FORMA AS FORMA, SUM(IMP_TOT * v.type) as TOTAL
+                strSql = `SELECT  CONTENEDOR, to_number(TO_CHAR(VHD.FECHA_EMISION, 'YYYY')) AS ANIO, to_number(TO_CHAR(VHD.FECHA_EMISION, 'MM')) AS MES, VHD.TERMINAL, V.ABBREV AS COD_TIPO_COMPROB, VHD.TIPO, iso1, iso2.tipo as altura, ISO3.FORMA AS FORMA, SUM(IMP_TOT * v.type) as TOTAL
                               FROM V_INVOICE_HEADER_DETAIL VHD
                                   INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
                                   LEFT JOIN ISO2 ON VHD.ISO2 = ISO2.ID
@@ -401,7 +401,6 @@ group by VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_E
 
                         })
                         .catch(err => {
-                            console.info("SHIT catch")
                             self.cn.releaseConnection(connection);
                             reject({
                                 status: "ERROR",
