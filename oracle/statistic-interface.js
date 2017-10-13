@@ -111,6 +111,28 @@ module.exports = function () {
                 });
         });
 
+        seneca.add({role: "statistic", entity: "gate", cmd: "getCountByHourMov"}, (args, done) => {
+            const gate = new Gate(oracle);
+            gate.getCountByHourMov({fechaInicio: args.fechaInicio, fechaFin: args.fechaFin, terminal: args.terminal})
+                .then( data => {
+                    done(null, data);
+                })
+                .catch(err => {
+                    done(err);
+                });
+        });
+
+        seneca.add({role: "statistic", entity: "gate", cmd: "getCountByDay"}, (args, done) => {
+            const gate = new Gate(oracle);
+            gate.getCountByDay({fechaInicio: args.fechaInicio, fechaFin: args.fechaFin})
+                .then( data => {
+                    done(null, data);
+                })
+                .catch(err => {
+                    done(err);
+                });
+        });
+
     });
 
 };
