@@ -61,6 +61,65 @@ class Appointment {
         });
     }
 
+    getCountByDay (params) {
+        return new Promise((resolve, reject) => {
+            var moment = require("moment");
+            var fechaInicio,
+                fechaFin;
+
+            if (params.fechaInicio) {
+                fechaInicio = moment(moment(params.fechaInicio, ['YYYY-MM-DD'])).toDate();
+            }
+
+            if (params.fechaFin) {
+                fechaFin = moment(moment(params.fechaFin, ['YYYY-MM-DD'])).toDate();
+                fechaFin = moment(fechaInicio).add(1, 'days').toDate();
+            }
+
+            if (params.fecha !== undefined) {
+                fechaInicio = moment(moment(params.fecha, ['YYYY-MM-DD'])).toDate();
+                fechaFin = moment(fechaInicio).add(1, 'days').toDate();
+            }
+
+            var jsonParam = [
+                {$match: {
+                    inicio: {$gte: fechaInicio},
+                    fin:    {$lt: fechaFin}}
+                },
+                //{ $project: {'accessDate': { $subtract: [ '$inicio', 180 * 60 * 1000 ] }, terminal: '$terminal'} },
+                { $project: {'accessDate': '$inicio', terminal: '$terminal'} },
+                { $group : {
+                    _id : { terminal: '$terminal',
+                        day: { $dayOfMonth : "$accessDate" }
+                    },
+                    cnt : { $sum : 1 }
+                }},
+                { $project: {
+                    _id: false,
+                    terminal: '$_id.terminal',
+                    day: '$_id.day',
+                    cnt: true
+                }},
+                { $sort: {'day': 1, 'terminal': 1 }}
+            ];
+            console.log(JSON.stringify(jsonParam));
+            this.model.aggregate(jsonParam, (err, data) => {
+                if (err) {
+                    reject({
+                        status: "ERROR",
+                        message: err.message,
+                        data: err
+                    });
+                } else {
+                    resolve({
+                        status: "OK",
+                        data: data
+                    });
+                }
+            });
+        });
+    }
+
     getCountByMonth (params) {
         return new Promise((resolve, reject) => {
             var moment = require("moment");

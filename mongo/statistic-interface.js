@@ -7,7 +7,7 @@ module.exports = function () {
     var seneca = this;
     console.info("Init Statistic MongoDB");
 
-    const config = require("../config/config.js")();
+    const config = require("../config/config.js");
 
     require("./include/mongoose.js")(config.mongo.url, config.mongo.options);
     const Appointment = require('./appointment.js');
@@ -15,9 +15,9 @@ module.exports = function () {
 
     console.info("Adding Role: 'statistic'");
 
-    seneca.add({role: "statistic", entity: "appointment", cmd: "getCountByMonth"}, (args, done) => {
+    seneca.add({role: "statistic", entity: "appointment", cmd: "getCountByHour"}, (args, done) => {
         var appointment = new Appointment();
-        appointment.getCountByMonth({fecha: args.fecha})
+        appointment.getCountByHour({fechaInicio: args.fechaInicio, fechaFin: args.fechaFin, fecha: args.fecha})
             .then( data => {
                 done(null, data);
             })
@@ -26,9 +26,20 @@ module.exports = function () {
             });
     });
 
-    seneca.add({role: "statistic", entity: "appointment", cmd: "getCountByHour"}, (args, done) => {
+    seneca.add({role: "statistic", entity: "appointment", cmd: "getCountByDay"}, (args, done) => {
         var appointment = new Appointment();
-        appointment.getCountByHour({fechaInicio: args.fechaInicio, fechaFin: args.fechaFin, fecha: args.fecha})
+        appointment.getCountByDay({fechaInicio: args.fechaInicio, fechaFin: args.fechaFin, fecha: args.fecha})
+            .then( data => {
+                done(null, data);
+            })
+            .catch(err => {
+                done(err);
+            });
+    });
+
+    seneca.add({role: "statistic", entity: "appointment", cmd: "getCountByMonth"}, (args, done) => {
+        var appointment = new Appointment();
+        appointment.getCountByMonth({fecha: args.fecha})
             .then( data => {
                 done(null, data);
             })
