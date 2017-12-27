@@ -86,8 +86,8 @@ class Appointment {
                     inicio: {$gte: fechaInicio},
                     fin:    {$lt: fechaFin}}
                 },
-                //{ $project: {'accessDate': { $subtract: [ '$inicio', 180 * 60 * 1000 ] }, terminal: '$terminal'} },
-                { $project: {'accessDate': '$inicio', terminal: '$terminal'} },
+                { $project: {'accessDate': { $subtract: [ '$inicio', 180 * 60 * 1000 ] }, terminal: '$terminal'} },
+                //{ $project: {'accessDate': '$inicio', terminal: '$terminal'} },
                 { $group : {
                     _id : { terminal: '$terminal',
                         day: { $dayOfMonth : "$accessDate" }
@@ -102,7 +102,6 @@ class Appointment {
                 }},
                 { $sort: {'day': 1, 'terminal': 1 }}
             ];
-            console.log(JSON.stringify(jsonParam));
             this.model.aggregate(jsonParam, (err, data) => {
                 if (err) {
                     reject({
