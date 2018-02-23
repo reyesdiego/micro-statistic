@@ -300,31 +300,47 @@ group by VHD.CONTENEDOR, TO_CHAR(VHD.FECHA_EMISION, 'YYYY'), TO_CHAR(VHD.FECHA_E
 
             var strSql = '';
             if (groups !== '') {
-                strSql = `SELECT BUQUE_NOMBRE AS BUQUE, BUQUE_VIAJE AS VIAJE, CONTENEDOR, to_number(TO_CHAR(VHD.FECHA_EMISION, 'YYYY')) AS ANIO, to_number(TO_CHAR(VHD.FECHA_EMISION, 'MM')) AS MES, VHD.TERMINAL, VHD.TIPO, TG.TARIFARIO_HEADER_ID, iso1, iso2.tipo as altura, ISO3.FORMA AS FORMA, SUM(IMP_TOT * v.type) as TOTAL
-                            FROM V_INVOICE_HEADER_DETAIL VHD
-                                INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
-                                INNER JOIN TARIFARIO_TERMINAL TT ON TT.CODE = VHD.CODE AND TT.TERMINAL = VHD.TERMINAL
-                                INNER JOIN TARIFARIO_GROUP TG ON TT.TARIFARIO_ID = TG.TARIFARIO_ID
-                                LEFT JOIN ISO2 ON VHD.ISO2 = ISO2.ID
-                                LEFT JOIN ISO3 ON VHD.ISO3 = ISO3.ID
-                                --LEFT JOIN ISO3_FORMA ISO3F ON ISO3F.ID = ISO3.FORMA
-                            WHERE COD_MONEDA = 'DOL' AND --CONTENEDOR = 'EGHU9069295' AND
-                                  FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
-                                  FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') AND
-                                  LENGTH(CONTENEDOR) = 11 AND
-                                        EXISTS ( SELECT *
-                                              FROM V_INVOICE_HEADER_DETAIL VH2
-                                              WHERE VH2.TERMINAL = VHD.TERMINAL AND
-                                                    VHD.ID = VH2.ID AND
-                                                    EXISTS ( SELECT *
-                                                              FROM TARIFARIO_TERMINAL TT1
-                                                                  INNER JOIN TARIFARIO_GROUP TG1 ON TT1.TARIFARIO_ID = TG1.TARIFARIO_ID
-                                                              WHERE TT1.CODE = VH2.CODE AND
-                                                                    VHD.TERMINAL = TT1.TERMINAL AND
-                                                                    TT1.CODE = VH2.CODE AND
-                                                                    TG1.TARIFARIO_HEADER_ID IN (${groups})  )
-                                             )
-                            GROUP BY BUQUE_NOMBRE, BUQUE_VIAJE, CONTENEDOR, to_number(TO_CHAR(VHD.FECHA_EMISION, 'YYYY')), to_number(TO_CHAR(VHD.FECHA_EMISION, 'MM')), VHD.TERMINAL, VHD.TIPO, TG.TARIFARIO_HEADER_ID, iso1, iso2.tipo, ISO3.FORMA`;
+                // strSql = `SELECT BUQUE_NOMBRE AS BUQUE, BUQUE_VIAJE AS VIAJE, CONTENEDOR, to_number(TO_CHAR(VHD.FECHA_EMISION, 'YYYY')) AS ANIO, to_number(TO_CHAR(VHD.FECHA_EMISION, 'MM')) AS MES, VHD.TERMINAL, VHD.TIPO, TG.TARIFARIO_HEADER_ID, iso1, iso2.tipo as altura, ISO3.FORMA AS FORMA, SUM(IMP_TOT * v.type) as TOTAL
+                //             FROM V_INVOICE_HEADER_DETAIL VHD
+                //                 INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
+                //                 INNER JOIN TARIFARIO_TERMINAL TT ON TT.CODE = VHD.CODE AND TT.TERMINAL = VHD.TERMINAL
+                //                 INNER JOIN TARIFARIO_GROUP TG ON TT.TARIFARIO_ID = TG.TARIFARIO_ID
+                //                 LEFT JOIN ISO2 ON VHD.ISO2 = ISO2.ID
+                //                 LEFT JOIN ISO3 ON VHD.ISO3 = ISO3.ID
+                //                 --LEFT JOIN ISO3_FORMA ISO3F ON ISO3F.ID = ISO3.FORMA
+                //             WHERE COD_MONEDA = 'DOL' AND --CONTENEDOR = 'EGHU9069295' AND
+            //                   FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
+                //                   FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') AND
+                //                   LENGTH(CONTENEDOR) = 11 AND
+                //                         EXISTS ( SELECT *
+                //                               FROM V_INVOICE_HEADER_DETAIL VH2
+                //                               WHERE VH2.TERMINAL = VHD.TERMINAL AND
+                //                                     VHD.ID = VH2.ID AND
+                //                                     EXISTS ( SELECT *
+                //                                               FROM TARIFARIO_TERMINAL TT1
+                //                                                   INNER JOIN TARIFARIO_GROUP TG1 ON TT1.TARIFARIO_ID = TG1.TARIFARIO_ID
+                //                                               WHERE TT1.CODE = VH2.CODE AND
+                //                                                     VHD.TERMINAL = TT1.TERMINAL AND
+                //                                                     TT1.CODE = VH2.CODE AND
+                //                                                     TG1.TARIFARIO_HEADER_ID IN (${groups})  )
+                //                              )
+                //             GROUP BY BUQUE_NOMBRE, BUQUE_VIAJE, CONTENEDOR, to_number(TO_CHAR(VHD.FECHA_EMISION, 'YYYY')), to_number(TO_CHAR(VHD.FECHA_EMISION, 'MM')), VHD.TERMINAL, VHD.TIPO, TG.TARIFARIO_HEADER_ID, iso1, iso2.tipo, ISO3.FORMA`;
+                strSql = `SELECT BUQUE_NOMBRE AS BUQUE, BUQUE_VIAJE AS VIAJE, CONTENEDOR, to_number(TO_CHAR(VHD.FECHA_EMISION, 'YYYY')) AS ANIO, to_number(TO_CHAR(VHD.FECHA_EMISION, 'MM')) AS MES, VHD.TERMINAL, VHD.TIPO, TG.CODE, iso1, iso2.tipo as altura, ISO3.FORMA AS FORMA, SUM(IMP_TOT * v.type) as TOTAL
+                        FROM V_INVOICE_HEADER_DETAIL VHD
+                            INNER JOIN VOUCHER_TYPE V ON V.ID = VHD.COD_TIPO_COMPROB
+                            INNER JOIN (SELECT TT.CODE, TT.TERMINAL
+                                            FROM TARIFARIO_GROUP TG
+                                                INNER JOIN TARIFARIO T ON TG.TARIFARIO_ID = T.ID
+                                                INNER JOIN TARIFARIO T1 ON T.CODE = T1.CODE
+                                                INNER JOIN TARIFARIO_TERMINAL TT ON TT.TARIFARIO_ID = T1.ID
+                                            WHERE TG.TARIFARIO_HEADER_ID IN (${groups}) ) TG ON TG.CODE = VHD.CODE AND TG.TERMINAL = VHD.TERMINAL
+                            LEFT JOIN ISO2 ON VHD.ISO2 = ISO2.ID
+                            LEFT JOIN ISO3 ON VHD.ISO3 = ISO3.ID
+                        WHERE COD_MONEDA = 'DOL' AND --CONTENEDOR = 'EGHU9069295' AND
+                            FECHA_EMISION >= TO_DATE(:1,'YYYY-MM-DD') AND
+                            FECHA_EMISION <= TO_DATE(:2,'YYYY-MM-DD') AND
+                            LENGTH(CONTENEDOR) = 11
+                        GROUP BY BUQUE_NOMBRE, BUQUE_VIAJE, CONTENEDOR, to_number(TO_CHAR(VHD.FECHA_EMISION, 'YYYY')), to_number(TO_CHAR(VHD.FECHA_EMISION, 'MM')), VHD.TERMINAL, VHD.TIPO, TG.CODE, iso1, iso2.tipo, ISO3.FORMA`;
             } else {
                 strSql = `SELECT BUQUE_NOMBRE AS BUQUE, BUQUE_VIAJE AS VIAJE, CONTENEDOR, to_number(TO_CHAR(VHD.FECHA_EMISION, 'YYYY')) AS ANIO, to_number(TO_CHAR(VHD.FECHA_EMISION, 'MM')) AS MES, VHD.TERMINAL, VHD.TIPO, iso1, iso2.tipo as altura, ISO3.FORMA AS FORMA, SUM(IMP_TOT * v.type) as TOTAL
                           FROM V_INVOICE_HEADER_DETAIL VHD
